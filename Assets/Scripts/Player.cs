@@ -12,7 +12,8 @@ public class Player : MonoBehaviour
 
     private Rigidbody2D rb;
     // Handles if entity is on ground and moving.
-    private bool grounded, moving;
+    private bool grounded, moving, fireHeld = false;
+    private Quaternion aimAngle;
     private Vector2 moveVal, lookVal;
     private Transform pivot;
 
@@ -73,11 +74,16 @@ public class Player : MonoBehaviour
             Vector3 playerVector = Camera.main.WorldToScreenPoint(transform.position);
             playerVector = new Vector3(cursorWorldPoint.x,cursorWorldPoint.y,0) - playerVector;
             float angle = Mathf.Atan2(playerVector.y, playerVector.x) * Mathf.Rad2Deg;
-            pivot.position = transform.position;
-            pivot.rotation = Quaternion.AngleAxis(angle - 90, Vector3.forward);
+            aimAngle = Quaternion.AngleAxis(angle - 90, Vector3.forward);
+            pivot.SetPositionAndRotation(transform.position, aimAngle);
         }
         else {
             arrow.GetComponent<Renderer>().enabled = false;
+            aimAngle = new Quaternion(0,0,0,0);
+        }
+
+        if (fireHeld) {
+            DrawLine(transform.position,transform.position + aimAngle * Vector3.up * 5, Color.green);
         }
 
     }
@@ -103,7 +109,8 @@ public class Player : MonoBehaviour
         moveVal = value.Get<Vector2>();
     }
 
-    public void OnJump() {// If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
+    public void OnJump() {
+        // If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
         if(grounded)
         {
             rb.AddForce(new Vector2(0, jumpHeight));
@@ -113,5 +120,23 @@ public class Player : MonoBehaviour
 
     public void OnLook(InputValue value) {
         lookVal = value.Get<Vector2>();
+    }
+
+    public void OnFire() {
+        fireHeld = !fireHeld;
+    }
+
+    void DrawLine(Vector3 start, Vector3 end, Color color, float duration = 0.2f) {
+        GameObject myLine = new GameObject();
+        myLine.transform.position = start;
+        myLine.AddComponent<LineRenderer>();
+        LineRenderer lr = myLine.GetComponent<LineRenderer>();
+        lr.startColor = color;
+        lr.endColor = color;
+        lr.startWidth = 0.1f;
+        lr.endWidth = 0.1f;
+        lr.SetPosition(0, start);
+        lr.SetPosition(1, end);
+        GameObject.Destroy(myLine, duration);
     }
 }
