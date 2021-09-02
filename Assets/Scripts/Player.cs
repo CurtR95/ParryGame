@@ -7,9 +7,7 @@ public class Player : MonoBehaviour
 {
     // Variable Jump Height, speed and maxSpeed - could be overridden in Unity or via other classes.
     public float jumpHeight, speed, maxSpeed, pointerRadius;
-
     public GameObject arrow;
-
     private Rigidbody2D rb;
     // Handles if entity is on ground and moving.
     private bool grounded, moving, fireHeld = false;
@@ -17,11 +15,13 @@ public class Player : MonoBehaviour
     private Vector2 moveVal, lookVal;
     private Transform pivot;
 
+    private AudioSource[] audioData;
+
     // Start is called before the first frame update
     void Start()
     {
-        
-        PlayerPrefs.SetString("ControlScheme", "Gamepad");
+        audioData = GetComponents<AudioSource>();
+        PlayerPrefs.SetString("ControlScheme", "Keyboard&Mouse");
         Debug.Log(PlayerPrefs.GetString("ControlScheme"));
         GetComponent<PlayerInput>().SwitchCurrentControlScheme(PlayerPrefs.GetString("ControlScheme"));
         rb = GetComponent<Rigidbody2D>();
@@ -32,10 +32,36 @@ public class Player : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
-    {
-        transform.Find("PlayerContainer").transform.position = transform.position;
+    void Update() {
+        SyncContainer();
+        HorizontalMovementController();
+        PointerController();
+        AttackController();
+    }
 
+    void OnCollisionEnter2D(Collision2D collision) {
+        // If the entity is touching the Landscape object, it is grounded.
+        if (collision.gameObject.CompareTag("Landscape")) {
+            grounded = true;
+        }
+        // If the entity is touching the Enemy Test object, destroy the player entity.
+        if (collision.gameObject.name == "Enemy Test") {
+            // Destroy(GameObject.Find("Player"));
+        }
+    }
+    
+    void OnCollisionExit2D(Collision2D collision) {
+        // If the entity is not touching the Landscape object, it is not grounded.
+        if (collision.gameObject.CompareTag("Landscape")) {
+            grounded = false;
+        }
+    }
+
+    void SyncContainer () {
+        transform.Find("PlayerContainer").transform.position = transform.position;
+    }
+
+    void HorizontalMovementController () {
         Vector3 horizontal = new Vector2(moveVal.x, 0);
         // Gets direction of the input, if the velocity isn't at max speed yet, increase it in the correct direction.
         if (rb.velocity.x > -maxSpeed && rb.velocity.x < maxSpeed) {
@@ -57,16 +83,15 @@ public class Player : MonoBehaviour
         else if (moving == true && grounded == false) {
             rb.velocity = new Vector2 (rb.velocity.x * 0.99f, rb.velocity.y);
         }
+    }
 
+    void PointerController () {
         Vector3 cursorWorldPoint;
         if (GetComponent<PlayerInput>().currentControlScheme == "Gamepad") {
-            // Debug.DrawRay(transform.position, new Vector3(lookVal.x,lookVal.y,0), Color.green);
             Vector3 gamepadScreenSpace = transform.position + new Vector3(lookVal.x,lookVal.y,0);
-            Debug.DrawRay(transform.position, gamepadScreenSpace - transform.position, Color.green);
             cursorWorldPoint = Camera.main.WorldToScreenPoint(gamepadScreenSpace);
         }
         else {
-            Debug.DrawRay(transform.position, Camera.main.ScreenToWorldPoint(lookVal)-transform.position, Color.green);
             cursorWorldPoint = lookVal;
         }
         if (lookVal != new Vector2(0,0)) {
@@ -81,27 +106,11 @@ public class Player : MonoBehaviour
             arrow.GetComponent<Renderer>().enabled = false;
             aimAngle = new Quaternion(0,0,0,0);
         }
+    }
 
+    void AttackController () {
         if (fireHeld) {
             DrawLine(transform.position,transform.position + aimAngle * Vector3.up * 5, Color.green);
-        }
-
-    }
-    void OnCollisionEnter2D(Collision2D collision) {
-        // If the entity is touching the Landscape object, it is grounded.
-        if (collision.gameObject.CompareTag("Landscape")) {
-            grounded = true;
-        }
-        // If the entity is touching the Enemy Test object, destroy the player entity.
-        if (collision.gameObject.name == "Enemy Test") {
-            // Destroy(GameObject.Find("Player"));
-        }
-    }
-    
-    void OnCollisionExit2D(Collision2D collision) {
-        // If the entity is not touching the Landscape object, it is not grounded.
-        if (collision.gameObject.CompareTag("Landscape")) {
-            grounded = false;
         }
     }
 
@@ -113,6 +122,7 @@ public class Player : MonoBehaviour
         // If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
         if(grounded)
         {
+            audioData[0].Play(0);
             rb.AddForce(new Vector2(0, jumpHeight));
             grounded = false;
         }
@@ -124,6 +134,9 @@ public class Player : MonoBehaviour
 
     public void OnFire() {
         fireHeld = !fireHeld;
+        if (fireHeld) {
+            audioData[1].Play(0);
+        }
     }
 
     void DrawLine(Vector3 start, Vector3 end, Color color, float duration = 0.2f) {
