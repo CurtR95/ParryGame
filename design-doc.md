@@ -20,7 +20,7 @@ Example enemies:
 - Advanced Enemy, strings together one melee with push and one ranged. Can only be attacked after winning a bout or mid bout.
 - Boss fight, uses all of the above mechanics. Can only be attacked after winning a bout or mid bout. Has full boss health bar.
 
-MVP Play:
+MVP Play:  
 Start with basics to guide player through simple controls and platforming. Teach wall jumping, etc.  
 Throw a Simple enemy at the player and guide them through simple mechanics.  
 Explain how the bout system works, show how bouts end if the player leaves line of sight for a duration of time.  
