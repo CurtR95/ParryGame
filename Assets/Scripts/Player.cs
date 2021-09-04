@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 public class Player : MonoBehaviour
 {
     // Variable Jump Height, speed and maxSpeed - could be overridden in Unity or via other classes.
-    public float jumpHeight, speed, maxSpeed, pointerRadius, jumpCooldown;
+    public float jumpHeight, speed, maxSpeed, pointerRadius, jumpCooldown, degreesUnableToJump;
     public GameObject arrow;
     private Rigidbody2D rb;
     // Handles if entity is on ground and moving.
@@ -21,8 +21,8 @@ public class Player : MonoBehaviour
     void Start()
     {
         audioData = GetComponents<AudioSource>();
-        // PlayerPrefs.SetString("ControlScheme", "Keyboard&Mouse");
-        PlayerPrefs.SetString("ControlScheme", "Gamepad");
+        PlayerPrefs.SetString("ControlScheme", "Keyboard&Mouse");
+        // PlayerPrefs.SetString("ControlScheme", "Gamepad");
         Debug.Log(PlayerPrefs.GetString("ControlScheme"));
         GetComponent<PlayerInput>().SwitchCurrentControlScheme(PlayerPrefs.GetString("ControlScheme"));
         rb = GetComponent<Rigidbody2D>();
@@ -38,22 +38,31 @@ public class Player : MonoBehaviour
         HorizontalMovementController();
         PointerController();
         AttackController();
+        GravityController();
+    }
+
+    void GravityController() {
+        if (attachedToWall) {
+            rb.gravityScale = 0;
+            rb.velocity = Vector2.zero;
+        }
+        else {
+            rb.gravityScale = 1;
+        }
     }
 
     void OnCollisionStay2D(Collision2D collision) {
         // If the entity is touching the Landscape object, it is grounded.
-        if (collision.gameObject.CompareTag("Landscape")) {
-            if (collision.GetContact(0).normal.y == 1) {
-                grounded = true;
-            }
-            else if (collision.GetContact(0).normal.x != 0) {
-                attachedToWall = true;
-            }
-            // Vector2 direction = collision.GetContact(0).normal;
-            // if( direction.x == 1 ) print("right");
-            // if( direction.x == -1 ) print("left");
-            // if( direction.y == 1 ) print("up");
-            // if( direction.y == -1 ) print("down");
+        // Vector2 direction = collision.GetContact(0).normal;
+        // if( direction.x == 1 ) print("right");
+        // if( direction.x == -1 ) print("left");
+        // if( direction.y == 1 ) print("up");
+        // if( direction.y == -1 ) print("down");
+        if ((collision.gameObject.CompareTag("Landscape") || collision.gameObject.CompareTag("UnstickableLandscape")) && collision.GetContact(0).normal.y == 1) {
+            grounded = true;
+        }
+        else if (collision.gameObject.CompareTag("Landscape") && collision.GetContact(0).normal.x != 0) {
+            attachedToWall = true;
         }
         // If the entity is touching the Enemy Test object, destroy the player entity.
         if (collision.gameObject.name == "Enemy Test") {
@@ -63,7 +72,7 @@ public class Player : MonoBehaviour
     
     void OnCollisionExit2D(Collision2D collision) {
         // If the entity is not touching the Landscape object, it is not grounded.
-        if (collision.gameObject.CompareTag("Landscape")) {
+        if (collision.gameObject.CompareTag("Landscape") || collision.gameObject.CompareTag("UnstickableLandscape")) {
             grounded = false;
             attachedToWall = false;
         }
@@ -133,21 +142,30 @@ public class Player : MonoBehaviour
     public void OnJump() {
         // If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
         float time = Time.time;
-        if((grounded || attachedToWall) && time - lastJump > jumpCooldown) {
-            audioData[0].Play(0);
-            float jumpAngle = aimAngle.eulerAngles.z+90;
-            if (jumpAngle > 360) {
-                jumpAngle -= 360;
+        if (time - lastJump > jumpCooldown) {
+            if(grounded || attachedToWall) {
+                audioData[0].Play(0);
+                float jumpAngle = aimAngle.eulerAngles.z+90;
+                if (jumpAngle > 360) {
+                    jumpAngle -= 360;
+                }
+                if(grounded) {
+                    float exclusionDegree = jumpAngle+degreesUnableToJump/2;
+                    if (exclusionDegree > (360-degreesUnableToJump)) {
+                        jumpAngle = 90;
+                    }
+                }
+                else if (attachedToWall) {
+                    //TODO add wall jump
+                }
+                float forceModifier = Mathf.Abs((jumpAngle - 90)/45);
+                float jumpForce = jumpHeight * Mathf.Clamp(forceModifier,1,5);
+                // BUG not moving in the direction properly. Its kinda like a shove left/right then up?
+                rb.AddForce(new Vector2(Mathf.Cos(jumpAngle * Mathf.Deg2Rad), Mathf.Sin(jumpAngle * Mathf.Deg2Rad)) * jumpForce);
+                grounded = false;
+                attachedToWall = false;
+                lastJump = time;
             }
-            if (jumpAngle > 180) {
-                jumpAngle = 90;
-            }
-            float forceModifier = Mathf.Abs((jumpAngle - 90)/45);
-            float jumpForce = jumpHeight * Mathf.Clamp(forceModifier,1,5);
-            rb.AddForce(new Vector2(Mathf.Cos(jumpAngle * Mathf.Deg2Rad), Mathf.Sin(jumpAngle * Mathf.Deg2Rad)) * jumpForce);
-            grounded = false;
-            attachedToWall = false;
-            lastJump = time;
         }
     }
 
@@ -158,7 +176,7 @@ public class Player : MonoBehaviour
     public void OnFire() {
         fireHeld = !fireHeld;
         if (fireHeld) {
-            audioData[1].Play(0);
+            // audioData[1].Play(0);
         }
     }
 

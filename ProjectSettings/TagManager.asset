@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Landscape
   - Enemy
+  - UnstickableLandscape
   layers:
   - Default
   - TransparentFX
