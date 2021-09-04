@@ -14,7 +14,7 @@ A bout is made up of four stages:
 
 Example enemies:
 - Simple Enemy, engages in melee range only, simple four standard directions. Can only be attacked after winning a bout or mid bout.
-- Range Enemy, engage in randged combat only, diagnols only. Can be attacked anytime.
+- Range Enemy, engage in randged combat only, diagonal s only. Can be attacked anytime.
 - Charger, will chase the player with a single directional, always the opposite direction they are charging in. If the player is in melee range already they will shove the player back with a harmless attack. Can be attacked from either behind, or by winning a bout.
 - Mini Boss, String of commands shown from left to right. Can only be attacked after winning a bout or mid bout.
 - Advanced Enemy, strings together one melee with push and one ranged. Can only be attacked after winning a bout or mid bout.
