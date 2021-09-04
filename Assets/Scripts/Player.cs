@@ -6,22 +6,23 @@ using UnityEngine.InputSystem;
 public class Player : MonoBehaviour
 {
     // Variable Jump Height, speed and maxSpeed - could be overridden in Unity or via other classes.
-    public float jumpHeight, speed, maxSpeed, pointerRadius;
+    public float jumpHeight, speed, maxSpeed, pointerRadius, jumpCooldown;
     public GameObject arrow;
     private Rigidbody2D rb;
     // Handles if entity is on ground and moving.
-    private bool grounded, moving, fireHeld = false;
+    private bool grounded, moving, attachedToWall, fireHeld = false;
     private Quaternion aimAngle;
     private Vector2 moveVal, lookVal;
     private Transform pivot;
-
+    private float lastJump;
     private AudioSource[] audioData;
 
     // Start is called before the first frame update
     void Start()
     {
         audioData = GetComponents<AudioSource>();
-        PlayerPrefs.SetString("ControlScheme", "Keyboard&Mouse");
+        // PlayerPrefs.SetString("ControlScheme", "Keyboard&Mouse");
+        PlayerPrefs.SetString("ControlScheme", "Gamepad");
         Debug.Log(PlayerPrefs.GetString("ControlScheme"));
         GetComponent<PlayerInput>().SwitchCurrentControlScheme(PlayerPrefs.GetString("ControlScheme"));
         rb = GetComponent<Rigidbody2D>();
@@ -39,10 +40,20 @@ public class Player : MonoBehaviour
         AttackController();
     }
 
-    void OnCollisionEnter2D(Collision2D collision) {
+    void OnCollisionStay2D(Collision2D collision) {
         // If the entity is touching the Landscape object, it is grounded.
         if (collision.gameObject.CompareTag("Landscape")) {
-            grounded = true;
+            if (collision.GetContact(0).normal.y == 1) {
+                grounded = true;
+            }
+            else if (collision.GetContact(0).normal.x != 0) {
+                attachedToWall = true;
+            }
+            // Vector2 direction = collision.GetContact(0).normal;
+            // if( direction.x == 1 ) print("right");
+            // if( direction.x == -1 ) print("left");
+            // if( direction.y == 1 ) print("up");
+            // if( direction.y == -1 ) print("down");
         }
         // If the entity is touching the Enemy Test object, destroy the player entity.
         if (collision.gameObject.name == "Enemy Test") {
@@ -54,6 +65,7 @@ public class Player : MonoBehaviour
         // If the entity is not touching the Landscape object, it is not grounded.
         if (collision.gameObject.CompareTag("Landscape")) {
             grounded = false;
+            attachedToWall = false;
         }
     }
 
@@ -120,11 +132,22 @@ public class Player : MonoBehaviour
 
     public void OnJump() {
         // If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
-        if(grounded)
-        {
+        float time = Time.time;
+        if((grounded || attachedToWall) && time - lastJump > jumpCooldown) {
             audioData[0].Play(0);
-            rb.AddForce(new Vector2(0, jumpHeight));
+            float jumpAngle = aimAngle.eulerAngles.z+90;
+            if (jumpAngle > 360) {
+                jumpAngle -= 360;
+            }
+            if (jumpAngle > 180) {
+                jumpAngle = 90;
+            }
+            float forceModifier = Mathf.Abs((jumpAngle - 90)/45);
+            float jumpForce = jumpHeight * Mathf.Clamp(forceModifier,1,5);
+            rb.AddForce(new Vector2(Mathf.Cos(jumpAngle * Mathf.Deg2Rad), Mathf.Sin(jumpAngle * Mathf.Deg2Rad)) * jumpForce);
             grounded = false;
+            attachedToWall = false;
+            lastJump = time;
         }
     }
 
