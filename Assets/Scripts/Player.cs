@@ -43,8 +43,8 @@ public class Player : MonoBehaviour
 
     void GravityController() {
         if (attachedToWall) {
+            Debug.Log(rb.velocity);
             rb.gravityScale = 0;
-            rb.velocity = Vector2.zero;
         }
         else {
             rb.gravityScale = 1;
@@ -63,6 +63,7 @@ public class Player : MonoBehaviour
         }
         else if (collision.gameObject.CompareTag("Landscape") && collision.GetContact(0).normal.x != 0) {
             attachedToWall = true;
+            Debug.Log(collision.gameObject.transform.localRotation.eulerAngles.z);
         }
         // If the entity is touching the Enemy Test object, destroy the player entity.
         if (collision.gameObject.name == "Enemy Test") {
@@ -140,16 +141,19 @@ public class Player : MonoBehaviour
     }
 
     public void OnJump() {
-        // If the entity is on the ground and the Jump key is pressed, add force equal to the jump height.
+        // If the entity is on the ground and the Jump key is pressed, add force
+        //equal to the jump height.
         float time = Time.time;
         if (time - lastJump > jumpCooldown) {
             if(grounded || attachedToWall) {
                 audioData[0].Play(0);
+                attachedToWall = false;
                 float jumpAngle = aimAngle.eulerAngles.z+90;
                 if (jumpAngle > 360) {
                     jumpAngle -= 360;
                 }
                 if(grounded) {
+                    // BUG think I've broken this.
                     float exclusionDegree = jumpAngle+degreesUnableToJump/2;
                     if (exclusionDegree > (360-degreesUnableToJump)) {
                         jumpAngle = 90;
@@ -159,11 +163,15 @@ public class Player : MonoBehaviour
                     //TODO add wall jump
                 }
                 float forceModifier = Mathf.Abs((jumpAngle - 90)/45);
+                Debug.Log(Quaternion.AngleAxis(jumpAngle,transform.forward) * transform.forward);
                 float jumpForce = jumpHeight * Mathf.Clamp(forceModifier,1,5);
-                // BUG not moving in the direction properly. Its kinda like a shove left/right then up?
-                rb.AddForce(new Vector2(Mathf.Cos(jumpAngle * Mathf.Deg2Rad), Mathf.Sin(jumpAngle * Mathf.Deg2Rad)) * jumpForce);
+                // TODO not moving in the direction properly. Its kinda like a
+                // shove left/right then up? CJR 06/09 Better but still not
+                // perfect.
+                // rb.AddForce(new Vector2(Mathf.Cos(jumpAngle * Mathf.Deg2Rad), Mathf.Sin(jumpAngle * Mathf.Deg2Rad)) * jumpForce);
+                Vector3 dir = Quaternion.AngleAxis(jumpAngle, Vector3.forward) * Vector3.right;
+                rb.AddForce(dir * jumpForce);
                 grounded = false;
-                attachedToWall = false;
                 lastJump = time;
             }
         }
